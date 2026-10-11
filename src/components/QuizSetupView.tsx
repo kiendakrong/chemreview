@@ -12,10 +12,13 @@ import {
   BarChart,
   CheckCircle2,
   Sparkles,
+  UserCheck,
+  GraduationCap,
 } from 'lucide-react';
 
 export const QuizSetupView: React.FC = () => {
   const {
+    currentUser,
     selectedChapter,
     currentGrade,
     chapters,
@@ -24,7 +27,12 @@ export const QuizSetupView: React.FC = () => {
     startQuiz,
     setCurrentView,
     wrongQuestionIds,
+    updateStudentInfo,
   } = useApp();
+
+  const [studentNameInput, setStudentNameInput] = useState<string>(currentUser.name || '');
+  const [studentClassInput, setStudentClassInput] = useState<string>(currentUser.className || `${currentGrade}A1`);
+  const [studentInputError, setStudentInputError] = useState<string>('');
 
   const [mode, setMode] = useState<PracticeMode>('full_chapter');
   const [questionCount, setQuestionCount] = useState<number>(18);
@@ -52,6 +60,18 @@ export const QuizSetupView: React.FC = () => {
   const countApply = Math.max(0, actualCount - countKnow - countUnderstand);
 
   const handleStart = () => {
+    if (!studentNameInput.trim()) {
+      setStudentInputError('Vui lòng nhập Họ và tên của bạn trước khi bắt đầu bài làm!');
+      return;
+    }
+    if (!studentClassInput.trim()) {
+      setStudentInputError('Vui lòng nhập Lớp học của bạn trước khi bắt đầu bài làm!');
+      return;
+    }
+
+    // Save student profile
+    updateStudentInfo(studentNameInput.trim(), studentClassInput.trim(), currentGrade);
+
     startQuiz({
       chapterId: selectedChapter?.id || 'all',
       mode,
@@ -87,6 +107,83 @@ export const QuizSetupView: React.FC = () => {
 
       {/* Main Settings Card */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
+        {/* 0. Thông tin học sinh */}
+        <div className="p-4 bg-gradient-to-r from-teal-50/90 via-cyan-50/80 to-blue-50/90 rounded-2xl border border-teal-200/90 shadow-2xs">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center space-x-1.5">
+              <UserCheck className="w-4 h-4 text-teal-700" />
+              <span>Thông tin học sinh làm bài</span>
+            </span>
+            <span className="text-[11px] font-bold text-teal-800 bg-white/90 px-2.5 py-0.5 rounded-full border border-teal-200">
+              Trường THPT Đakrông
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label htmlFor="student-name-input" className="block text-xs font-bold text-slate-700 mb-1">
+                Họ và tên học sinh (*):
+              </label>
+              <input
+                id="student-name-input"
+                type="text"
+                value={studentNameInput}
+                onChange={(e) => {
+                  setStudentNameInput(e.target.value);
+                  setStudentInputError('');
+                }}
+                placeholder="Ví dụ: Nguyễn Văn An"
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-2xs"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="student-class-input" className="block text-xs font-bold text-slate-700 mb-1">
+                Lớp học (*):
+              </label>
+              <input
+                id="student-class-input"
+                type="text"
+                value={studentClassInput}
+                onChange={(e) => {
+                  setStudentClassInput(e.target.value);
+                  setStudentInputError('');
+                }}
+                placeholder={`Ví dụ: ${currentGrade}A1, ${currentGrade}A2...`}
+                className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-2xs"
+              />
+            </div>
+          </div>
+
+          {/* Quick class selectors */}
+          <div className="mt-2.5 flex items-center flex-wrap gap-1.5 text-[11px]">
+            <span className="text-slate-500 font-semibold mr-1">Lớp nhanh:</span>
+            {[`${currentGrade}A1`, `${currentGrade}A2`, `${currentGrade}A3`, `${currentGrade}B1`, `${currentGrade}B2`].map((cls) => (
+              <button
+                key={cls}
+                type="button"
+                onClick={() => {
+                  setStudentClassInput(cls);
+                  setStudentInputError('');
+                }}
+                className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                  studentClassInput.toUpperCase() === cls
+                    ? 'bg-teal-700 text-white'
+                    : 'bg-white hover:bg-teal-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                {cls}
+              </button>
+            ))}
+          </div>
+
+          {studentInputError && (
+            <div className="mt-2.5 p-2 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-lg flex items-center space-x-1.5">
+              <span>⚠️ {studentInputError}</span>
+            </div>
+          )}
+        </div>
+
         {/* 1. Chọn Chương */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">

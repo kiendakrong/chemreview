@@ -10,6 +10,7 @@ import {
   QuestionFormat,
 } from '../types';
 import { INITIAL_CHAPTERS, INITIAL_QUESTIONS } from '../data/curriculumData';
+import { INITIAL_STUDENT_HISTORY } from '../data/initialHistory';
 import { gradePracticeSession } from '../utils/grading';
 
 export type AppView =
@@ -35,6 +36,7 @@ interface AppContextType {
   currentUser: User;
   switchUserRole: (role: 'student' | 'teacher') => void;
   setUser: (user: User) => void;
+  updateStudentInfo: (name: string, className: string, grade?: Grade) => void;
   currentGrade: Grade;
   setCurrentGrade: (grade: Grade) => void;
   currentView: AppView;
@@ -188,13 +190,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // History and wrong questions
   const [history, setHistory] = useState<PracticeSessionResult[]>(() => {
     const saved = localStorage.getItem('thpt_dkr_history');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) {
+      localStorage.setItem('thpt_dkr_history', JSON.stringify(INITIAL_STUDENT_HISTORY));
+      return INITIAL_STUDENT_HISTORY;
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_STUDENT_HISTORY;
+    } catch {
+      return INITIAL_STUDENT_HISTORY;
+    }
   });
 
   const [wrongQuestionIds, setWrongQuestionIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('thpt_dkr_wrong_qids');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const setUser = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('thpt_dkr_user', JSON.stringify(user));
+  };
+
+  const updateStudentInfo = (name: string, className: string, grade?: Grade) => {
+    const newGrade = grade !== undefined ? grade : (currentUser.classGrade || 12);
+    const updated: User = {
+      ...currentUser,
+      name: name.trim() || currentUser.name,
+      className: className.trim().toUpperCase() || currentUser.className,
+      classGrade: newGrade,
+    };
+    setCurrentUser(updated);
+    localStorage.setItem('thpt_dkr_user', JSON.stringify(updated));
+    if (grade !== undefined) {
+      setCurrentGrade(newGrade);
+    }
+  };
 
   // Save changes to localStorage
   useEffect(() => {
@@ -352,6 +383,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sessionId: `SES-${Date.now()}`,
       studentId: currentUser.id,
       studentName: currentUser.name,
+      className: currentUser.className,
       grade: currentGrade,
       chapterId: targetChapter?.id || 'all',
       chapterTitle: targetChapter?.title || 'Đề tổng hợp',
@@ -495,7 +527,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         switchUserRole,
-        setUser: setCurrentUser,
+        setUser,
+        updateStudentInfo,
         currentGrade,
         setCurrentGrade,
         currentView,

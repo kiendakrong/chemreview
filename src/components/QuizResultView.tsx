@@ -126,6 +126,11 @@ export const QuizResultView: React.FC = () => {
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
                 Kết quả bài làm của {lastResult.studentName}
+                {lastResult.className && (
+                  <span className="ml-2 text-sm font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                    Lớp {lastResult.className}
+                  </span>
+                )}
               </h1>
               <div className="flex items-center space-x-3 text-xs text-slate-500 mt-2 font-medium">
                 <span className="flex items-center space-x-1">

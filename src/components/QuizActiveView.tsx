@@ -16,6 +16,7 @@ import {
 
 export const QuizActiveView: React.FC = () => {
   const {
+    currentUser,
     activeQuestions,
     userAnswers,
     setAnswer,
@@ -104,6 +105,11 @@ export const QuizActiveView: React.FC = () => {
             <span className="text-emerald-600 font-bold">{answeredCount}</span>
             <span>• Chưa làm:</span>
             <span className="text-amber-600 font-bold">{unansweredCount}</span>
+          </div>
+          <div className="hidden md:flex items-center space-x-1.5 text-xs text-slate-700 font-bold pl-3 border-l border-slate-200">
+            <span className="px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-[11px] font-bold">
+              👤 {currentUser.name} • Lớp {currentUser.className || '12A1'}
+            </span>
           </div>
         </div>
 

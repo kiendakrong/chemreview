@@ -105,6 +105,7 @@ export function gradePracticeSession({
   sessionId,
   studentId,
   studentName,
+  className,
   grade,
   chapterId,
   chapterTitle,
@@ -118,6 +119,7 @@ export function gradePracticeSession({
   sessionId: string;
   studentId: string;
   studentName: string;
+  className?: string;
   grade: Grade;
   chapterId: string;
   chapterTitle: string;
@@ -291,6 +293,7 @@ export function gradePracticeSession({
     id: sessionId,
     studentId,
     studentName,
+    className,
     grade,
     chapterId,
     chapterTitle,

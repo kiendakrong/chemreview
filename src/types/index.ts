@@ -115,6 +115,7 @@ export interface PracticeSessionResult {
   id: string;
   studentId: string;
   studentName: string;
+  className?: string;
   grade: Grade;
   chapterId: string;
   chapterTitle: string;

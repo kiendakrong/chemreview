@@ -61,7 +61,7 @@ export const HomeView: React.FC = () => {
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight mb-3">
-            Chào mừng {currentUser.name}! 👋
+            Chào mừng {currentUser.name} {currentUser.role === 'student' && currentUser.className ? `(Lớp ${currentUser.className})` : ''}! 👋
           </h1>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-normal mb-6 max-w-2xl">
             Hệ thống ôn luyện Hóa học toàn diện: nắm chắc lý thuyết trọng tâm, thành thạo{' '}

@@ -12,6 +12,9 @@ import {
   ChevronDown,
   GraduationCap,
   Sparkles,
+  Eye,
+  EyeOff,
+  Lock,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -31,6 +34,7 @@ export const Navbar: React.FC = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [inputPassword, setInputPassword] = useState('');
+  const [showPasswordText, setShowPasswordText] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
   const pendingQuestionsCount = questions.filter((q) => q.status === 'pending_approval').length;
@@ -52,7 +56,7 @@ export const Navbar: React.FC = () => {
       setShowUserModal(false);
       setCurrentView('teacher-admin');
     } else {
-      setPasswordError('Mật khẩu không chính xác! Vui lòng nhập đúng mật khẩu của giáo viên (kien12345).');
+      setPasswordError('Mật khẩu không chính xác. Vui lòng kiểm tra lại!');
     }
   };
 
@@ -161,7 +165,7 @@ export const Navbar: React.FC = () => {
                     ? 'bg-purple-700 text-white shadow-xs'
                     : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
                 }`}
-                title="Khu vực quản trị giáo viên (Mật khẩu kien12345)"
+                title="Khu vực quản trị giáo viên"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Quản trị GV</span>
@@ -321,7 +325,7 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="mt-2 text-[11px] text-purple-900/80 bg-white/70 p-2 rounded-lg border border-purple-100">
                   Quản lý ngân hàng câu hỏi, duyệt câu hỏi, sinh đề AI bằng Gemini, cấu hình lý thuyết và theo dõi điểm số học sinh.
-                  <span className="block mt-1 font-semibold text-purple-700">🔒 Yêu cầu mật khẩu: kien12345</span>
+                  <span className="block mt-1 font-semibold text-purple-700">🔒 Yêu cầu mật khẩu quản trị</span>
                 </div>
               </div>
             </div>
@@ -358,23 +362,35 @@ export const Navbar: React.FC = () => {
 
             <form onSubmit={handlePasswordSubmit} className="my-4 space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Nhập mật khẩu giáo viên:
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Nhập mật khẩu giáo viên:</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Chế độ bảo mật</span>
                 </label>
-                <input
-                  type="password"
-                  autoFocus
-                  value={inputPassword}
-                  onChange={(e) => {
-                    setInputPassword(e.target.value);
-                    setPasswordError('');
-                  }}
-                  placeholder="Nhập mật khẩu (kien12345)..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-purple-600 focus:outline-none text-sm text-slate-900 bg-slate-50 focus:bg-white"
-                />
-                <p className="text-[11px] text-purple-700 font-semibold mt-1">
-                  * Mật khẩu quản trị giáo viên: <code>kien12345</code>
-                </p>
+                <div className="relative">
+                  <input
+                    type={showPasswordText ? 'text' : 'password'}
+                    autoFocus
+                    value={inputPassword}
+                    onChange={(e) => {
+                      setInputPassword(e.target.value);
+                      setPasswordError('');
+                    }}
+                    placeholder="Nhập mật khẩu quản trị..."
+                    className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border-2 border-slate-200 focus:border-purple-600 focus:outline-none text-sm text-slate-900 bg-slate-50 focus:bg-white transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordText(!showPasswordText)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-purple-700 transition-colors"
+                    title={showPasswordText ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showPasswordText ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {passwordError && (
