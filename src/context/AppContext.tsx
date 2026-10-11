@@ -59,6 +59,10 @@ interface AppContextType {
   lastResult: PracticeSessionResult | null;
   retryQuiz: () => void;
   practiceWrongQuestions: () => void;
+  // Teacher auth state
+  isTeacherAuthenticated: boolean;
+  loginTeacher: (password: string) => boolean;
+  logoutTeacher: () => void;
   // History & stats
   history: PracticeSessionResult[];
   wrongQuestionIds: string[];
@@ -117,16 +121,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Current view
   const [currentView, setCurrentView] = useState<AppView>('home');
 
-  // Chapters & Questions state
+  // Chapters & Questions state with version upgrade guarantee
+  const CURRICULUM_VERSION_KEY = 'thpt_dkr_version_21ch';
+  const CURRENT_VERSION = 'v2_21_chapters_966q';
+
   const [chapters, setChapters] = useState<Chapter[]>(() => {
+    const version = localStorage.getItem(CURRICULUM_VERSION_KEY);
     const saved = localStorage.getItem('thpt_dkr_chapters');
-    return saved ? JSON.parse(saved) : INITIAL_CHAPTERS;
+    if (version !== CURRENT_VERSION || !saved) {
+      localStorage.setItem(CURRICULUM_VERSION_KEY, CURRENT_VERSION);
+      localStorage.setItem('thpt_dkr_chapters', JSON.stringify(INITIAL_CHAPTERS));
+      return INITIAL_CHAPTERS;
+    }
+    const parsed = JSON.parse(saved);
+    return parsed.length >= 21 ? parsed : INITIAL_CHAPTERS;
   });
 
   const [questions, setQuestions] = useState<Question[]>(() => {
+    const version = localStorage.getItem(CURRICULUM_VERSION_KEY);
     const saved = localStorage.getItem('thpt_dkr_questions');
-    return saved ? JSON.parse(saved) : INITIAL_QUESTIONS;
+    if (version !== CURRENT_VERSION || !saved) {
+      localStorage.setItem(CURRICULUM_VERSION_KEY, CURRENT_VERSION);
+      localStorage.setItem('thpt_dkr_questions', JSON.stringify(INITIAL_QUESTIONS));
+      return INITIAL_QUESTIONS;
+    }
+    const parsed = JSON.parse(saved);
+    return parsed.length >= 500 ? parsed : INITIAL_QUESTIONS;
   });
+
+  // Teacher authentication state (password: kien12345)
+  const [isTeacherAuthenticated, setIsTeacherAuthenticated] = useState<boolean>(() => {
+    return localStorage.getItem('thpt_dkr_teacher_auth') === 'true';
+  });
+
+  const loginTeacher = (password: string): boolean => {
+    if (password === 'kien12345') {
+      setIsTeacherAuthenticated(true);
+      localStorage.setItem('thpt_dkr_teacher_auth', 'true');
+      setCurrentUser(DEFAULT_TEACHER);
+      return true;
+    }
+    return false;
+  };
+
+  const logoutTeacher = () => {
+    setIsTeacherAuthenticated(false);
+    localStorage.removeItem('thpt_dkr_teacher_auth');
+    setCurrentUser(DEFAULT_STUDENT);
+    setCurrentView('home');
+  };
 
   // Selected chapter for study
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
@@ -225,33 +268,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       candidates = candidates.filter((q) => q.cognitiveLevel === config.filterLevel);
     }
 
-    // Target cognitive ratio: 40% Biết, 30% Hiểu, 30% Vận dụng
-    const knowPool = candidates.filter((q) => q.cognitiveLevel === 'know');
-    const understandPool = candidates.filter((q) => q.cognitiveLevel === 'understand');
-    const applyPool = candidates.filter((q) => q.cognitiveLevel === 'apply');
-
-    const totalNeeded = Math.min(config.questionCount, candidates.length);
-    const targetKnow = Math.round(totalNeeded * 0.4);
-    const targetUnderstand = Math.round(totalNeeded * 0.3);
-    const targetApply = Math.max(0, totalNeeded - targetKnow - targetUnderstand);
-
     // Shuffle helper
     const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
 
-    const picked: Question[] = [];
-    picked.push(...shuffle(knowPool).slice(0, targetKnow));
-    picked.push(...shuffle(understandPool).slice(0, targetUnderstand));
-    picked.push(...shuffle(applyPool).slice(0, targetApply));
+    let picked: Question[] = [];
 
-    // If not enough by cognitive balance, fill from remaining candidates
-    if (picked.length < totalNeeded) {
-      const pickedIds = new Set(picked.map((q) => q.id));
-      const remaining = candidates.filter((q) => !pickedIds.has(q.id));
-      picked.push(...shuffle(remaining).slice(0, totalNeeded - picked.length));
+    if (config.mode === 'by_format' || config.filterFormat) {
+      // Practice by specific format
+      picked = shuffle(candidates).slice(0, Math.min(config.questionCount, candidates.length));
+    } else if (config.mode === 'wrong_questions_only') {
+      picked = shuffle(candidates).slice(0, Math.min(config.questionCount, candidates.length));
+    } else {
+      // Standard GDPT 2018 format: 12 multiple_choice (6đ) + 2 true_false (2đ) + 4 short_answer (2đ) = 18 câu (10đ)
+      const mcPool = candidates.filter((q) => q.format === 'multiple_choice');
+      const tfPool = candidates.filter((q) => q.format === 'true_false');
+      const saPool = candidates.filter((q) => q.format === 'short_answer');
+
+      const targetMC = Math.min(12, mcPool.length);
+      const targetTF = Math.min(2, tfPool.length);
+      const targetSA = Math.min(4, saPool.length);
+
+      picked.push(...shuffle(mcPool).slice(0, targetMC));
+      picked.push(...shuffle(tfPool).slice(0, targetTF));
+      picked.push(...shuffle(saPool).slice(0, targetSA));
+
+      // If bank doesn't have enough of a specific format, fill from remaining
+      const totalTarget = 18;
+      if (picked.length < totalTarget && candidates.length > picked.length) {
+        const pickedIds = new Set(picked.map((q) => q.id));
+        const remaining = candidates.filter((q) => !pickedIds.has(q.id));
+        picked.push(...shuffle(remaining).slice(0, totalTarget - picked.length));
+      }
     }
 
-    // If candidate bank is still small, use all available candidates
-    const finalQuestions = picked.length > 0 ? shuffle(picked) : shuffle(candidates);
+    const finalQuestions = picked.length > 0 ? picked : shuffle(candidates).slice(0, 18);
 
     // Shuffle options for multiple-choice questions to prevent memorization
     const finalizedQuestions = finalQuestions.map((q) => {
@@ -469,6 +519,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastResult,
         retryQuiz,
         practiceWrongQuestions,
+        isTeacherAuthenticated,
+        loginTeacher,
+        logoutTeacher,
         history,
         wrongQuestionIds,
         clearHistory,

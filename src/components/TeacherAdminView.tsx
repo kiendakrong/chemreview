@@ -36,7 +36,13 @@ export const TeacherAdminView: React.FC = () => {
     updateChapter,
     generateAIQuestions,
     history,
+    isTeacherAuthenticated,
+    loginTeacher,
+    logoutTeacher,
   } = useApp();
+
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState('');
 
   const [activeTab, setActiveTab] = useState<'bank' | 'ai' | 'curriculum' | 'analytics'>('bank');
 
@@ -216,6 +222,52 @@ export const TeacherAdminView: React.FC = () => {
     }))
     .filter((item) => item.question !== undefined);
 
+  if (!isTeacherAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto my-16 bg-white rounded-3xl p-8 border border-purple-200 shadow-xl text-center space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-purple-100 text-purple-700 mx-auto flex items-center justify-center font-bold">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900">Khu vực Quản trị Giáo viên</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          Phần quản trị dành riêng cho giáo viên bộ môn Hóa học Trường THPT Đakrông. Vui lòng nhập mật khẩu xác thực.
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!loginTeacher(adminPasswordInput)) {
+              setAdminPasswordError('Mật khẩu không chính xác! Mật khẩu là kien12345.');
+            } else {
+              setAdminPasswordError('');
+            }
+          }}
+          className="space-y-3 pt-2"
+        >
+          <input
+            type="password"
+            autoFocus
+            value={adminPasswordInput}
+            onChange={(e) => {
+              setAdminPasswordInput(e.target.value);
+              setAdminPasswordError('');
+            }}
+            placeholder="Nhập mật khẩu (kien12345)..."
+            className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-600 focus:outline-none text-sm text-slate-900 font-semibold"
+          />
+          {adminPasswordError && (
+            <p className="text-xs font-bold text-rose-600">{adminPasswordError}</p>
+          )}
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl bg-purple-700 hover:bg-purple-600 text-white font-black text-xs sm:text-sm shadow-md transition-all hover:scale-102"
+          >
+            Đăng nhập Quản trị
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-24">
       {/* Teacher Portal Header */}
@@ -242,6 +294,13 @@ export const TeacherAdminView: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={logoutTeacher}
+              className="px-3.5 py-2.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 text-purple-200 hover:text-white font-bold text-xs border border-purple-700 transition-colors"
+              title="Khóa phiên làm việc giáo viên"
+            >
+              Khóa Quản trị
+            </button>
             <button
               onClick={() => setShowAddModal(true)}
               className="px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-purple-500/20 transition-all hover:scale-102"
@@ -430,6 +489,46 @@ export const TeacherAdminView: React.FC = () => {
                         <ChemText content={opt.text} />
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {q.format === 'true_false' && q.subItems && (
+                  <div className="space-y-1.5 text-xs">
+                    <div className="font-bold text-[11px] text-purple-900 uppercase">4 Mệnh đề đánh giá Đúng / Sai:</div>
+                    {q.subItems.map((sub) => (
+                      <div
+                        key={sub.id}
+                        className="p-2 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="w-5 h-5 rounded-md bg-purple-100 text-purple-800 text-[11px] font-black flex items-center justify-center uppercase shrink-0">
+                            {sub.id}
+                          </span>
+                          <span className="text-slate-800 font-medium">
+                            <ChemText content={sub.text} />
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2.5 py-0.5 rounded text-[11px] font-bold shrink-0 ${
+                            sub.isCorrect
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                          }`}
+                        >
+                          {sub.isCorrect ? 'Đúng' : 'Sai'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {q.format === 'short_answer' && (
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+                    <span className="font-bold text-slate-700">Đáp án chuẩn: </span>
+                    <span className="font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      {q.acceptableAnswers?.join(' / ') || q.numericValue || 'Chưa thiết lập'}
+                    </span>
+                    {q.unit && <span className="ml-1.5 text-slate-500 font-semibold">({q.unit})</span>}
                   </div>
                 )}
 
@@ -807,6 +906,80 @@ export const TeacherAdminView: React.FC = () => {
                   <div className="text-[11px] text-slate-500">
                     * Đánh dấu radio bên phải phương án đúng.
                   </div>
+                </div>
+              )}
+
+              {/* DẠNG 2 CONFIG: ĐÚNG - SAI 4 Ý a, b, c, d */}
+              {newQFormat === 'true_false' && (
+                <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-slate-800">
+                      Cấu hình 4 ý a, b, c, d (chọn Đúng hoặc Sai cho mỗi ý):
+                    </span>
+                    <span className="text-[11px] text-purple-700 font-bold">
+                      Định dạng GDPT 2018
+                    </span>
+                  </div>
+
+                  {newQTfItems.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="w-6 h-6 rounded-md bg-purple-100 text-purple-800 text-xs font-black flex items-center justify-center shrink-0 uppercase">
+                          {item.id}
+                        </span>
+                        <input
+                          type="text"
+                          required
+                          value={item.text}
+                          onChange={(e) => {
+                            const updated = [...newQTfItems];
+                            updated[idx].text = e.target.value;
+                            setNewQTfItems(updated);
+                          }}
+                          placeholder={`Nội dung ý ${item.id} (*)...`}
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-xs font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...newQTfItems];
+                              updated[idx].isCorrect = true;
+                              setNewQTfItems(updated);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              item.isCorrect
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            Đúng
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...newQTfItems];
+                              updated[idx].isCorrect = false;
+                              setNewQTfItems(updated);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              !item.isCorrect
+                                ? 'bg-rose-600 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            Sai
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-slate-500">
+                    * Bấm nút "Đúng" hoặc "Sai" để chỉ định đáp án chuẩn của từng ý a, b, c, d.
+                  </p>
                 </div>
               )}
 

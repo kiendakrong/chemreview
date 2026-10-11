@@ -14,14 +14,9 @@ concurrency:
   group: 'pages'
   cancel-in-progress: true
 
-env:
-  ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: "node24"
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,12 +29,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
-      - name: Build application
+      - name: Typecheck and lint
+        run: npm run lint
+
+      - name: Build production bundle
         run: npm run build
         env:
           NODE_ENV: production
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -49,6 +48,15 @@ jobs:
         with:
           path: './dist'
 
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        continue-on-error: true

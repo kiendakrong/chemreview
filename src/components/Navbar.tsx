@@ -24,11 +24,37 @@ export const Navbar: React.FC = () => {
     setCurrentView,
     wrongQuestionIds,
     questions,
+    isTeacherAuthenticated,
+    loginTeacher,
   } = useApp();
 
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [inputPassword, setInputPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const pendingQuestionsCount = questions.filter((q) => q.status === 'pending_approval').length;
+
+  const handleTeacherAccess = () => {
+    if (isTeacherAuthenticated) {
+      setCurrentView('teacher-admin');
+    } else {
+      setInputPassword('');
+      setPasswordError('');
+      setShowPasswordModal(true);
+    }
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginTeacher(inputPassword)) {
+      setShowPasswordModal(false);
+      setShowUserModal(false);
+      setCurrentView('teacher-admin');
+    } else {
+      setPasswordError('Mật khẩu không chính xác! Vui lòng nhập đúng mật khẩu của giáo viên (kien12345).');
+    }
+  };
 
   return (
     <>
@@ -129,13 +155,13 @@ export const Navbar: React.FC = () => {
 
               {/* Teacher Admin Entry */}
               <button
-                onClick={() => setCurrentView('teacher-admin')}
+                onClick={handleTeacherAccess}
                 className={`relative px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all ${
                   currentView === 'teacher-admin'
                     ? 'bg-purple-700 text-white shadow-xs'
                     : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
                 }`}
-                title="Khu vực quản trị giáo viên"
+                title="Khu vực quản trị giáo viên (Mật khẩu kien12345)"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Quản trị GV</span>
@@ -260,8 +286,14 @@ export const Navbar: React.FC = () => {
               {/* Teacher Option */}
               <div
                 onClick={() => {
-                  switchUserRole('teacher');
-                  setShowUserModal(false);
+                  if (isTeacherAuthenticated) {
+                    switchUserRole('teacher');
+                    setShowUserModal(false);
+                  } else {
+                    setInputPassword('');
+                    setPasswordError('');
+                    setShowPasswordModal(true);
+                  }
                 }}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   currentUser.role === 'teacher'
@@ -289,6 +321,7 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="mt-2 text-[11px] text-purple-900/80 bg-white/70 p-2 rounded-lg border border-purple-100">
                   Quản lý ngân hàng câu hỏi, duyệt câu hỏi, sinh đề AI bằng Gemini, cấu hình lý thuyết và theo dõi điểm số học sinh.
+                  <span className="block mt-1 font-semibold text-purple-700">🔒 Yêu cầu mật khẩu: kien12345</span>
                 </div>
               </div>
             </div>
@@ -301,6 +334,71 @@ export const Navbar: React.FC = () => {
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Teacher Password Verification Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                  Xác thực Quyền Giáo viên
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Tổ Hóa học • THPT Đakrông
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="my-4 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Nhập mật khẩu giáo viên:
+                </label>
+                <input
+                  type="password"
+                  autoFocus
+                  value={inputPassword}
+                  onChange={(e) => {
+                    setInputPassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Nhập mật khẩu (kien12345)..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-purple-600 focus:outline-none text-sm text-slate-900 bg-slate-50 focus:bg-white"
+                />
+                <p className="text-[11px] text-purple-700 font-semibold mt-1">
+                  * Mật khẩu quản trị giáo viên: <code>kien12345</code>
+                </p>
+              </div>
+
+              {passwordError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-medium">
+                  {passwordError}
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-102"
+                >
+                  Đăng nhập Quản trị
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -130,7 +130,22 @@ export function gradePracticeSession({
 }): PracticeSessionResult {
   const totalQuestions = questions.length;
   const maxScore = 10.0;
-  const pointsPerQuestion = totalQuestions > 0 ? maxScore / totalQuestions : 0;
+
+  const mcQuestions = questions.filter((q) => q.format === 'multiple_choice');
+  const tfQuestions = questions.filter((q) => q.format === 'true_false');
+  const saQuestions = questions.filter((q) => q.format === 'short_answer');
+
+  const hasAllThree = mcQuestions.length > 0 && tfQuestions.length > 0 && saQuestions.length > 0;
+  const defaultPointsPerQ = totalQuestions > 0 ? maxScore / totalQuestions : 0;
+
+  const getQuestionMaxPoints = (format: QuestionFormat): number => {
+    if (hasAllThree) {
+      if (format === 'multiple_choice') return 6.0 / mcQuestions.length;
+      if (format === 'true_false') return 2.0 / tfQuestions.length;
+      if (format === 'short_answer') return 2.0 / saQuestions.length;
+    }
+    return defaultPointsPerQ;
+  };
 
   let totalEarnedPoints = 0;
   let correctCount = 0;
@@ -155,22 +170,23 @@ export function gradePracticeSession({
 
   for (const q of questions) {
     const rawAnswer = userAnswers[q.id];
+    const qMaxPoints = getQuestionMaxPoints(q.format);
     let isFullyCorrect = false;
     let earnedPoints = 0;
     let subResults: any = undefined;
 
     // Format stats increment
     performanceByFormat[q.format].total += 1;
-    performanceByFormat[q.format].maxPoints += pointsPerQuestion;
+    performanceByFormat[q.format].maxPoints += qMaxPoints;
     performanceByLevel[q.cognitiveLevel].total += 1;
-    performanceByLevel[q.cognitiveLevel].maxPoints += pointsPerQuestion;
+    performanceByLevel[q.cognitiveLevel].maxPoints += qMaxPoints;
 
     if (q.format === 'multiple_choice') {
       if (!rawAnswer) {
         unansweredCount++;
       } else if (rawAnswer === q.correctAnswer) {
         isFullyCorrect = true;
-        earnedPoints = pointsPerQuestion;
+        earnedPoints = qMaxPoints;
         correctCount++;
       } else {
         incorrectCount++;
@@ -180,7 +196,7 @@ export function gradePracticeSession({
       detailsPerQuestion[q.id] = {
         isCorrect: isFullyCorrect,
         earnedPoints,
-        maxPoints: pointsPerQuestion,
+        maxPoints: qMaxPoints,
         userAnswer: rawAnswer || 'Chưa trả lời',
         correctAnswer: q.correctAnswer || '',
         explanation: q.explanation,
@@ -195,7 +211,7 @@ export function gradePracticeSession({
 
       const tfEval = scoreTrueFalseQuestion(rawAnswer, q);
       subResults = tfEval.subResults;
-      earnedPoints = pointsPerQuestion * tfEval.earnedRatio;
+      earnedPoints = qMaxPoints * tfEval.earnedRatio;
       isFullyCorrect = tfEval.earnedRatio === 1.0;
 
       if (isFullyCorrect) {
@@ -218,7 +234,7 @@ export function gradePracticeSession({
       detailsPerQuestion[q.id] = {
         isCorrect: isFullyCorrect,
         earnedPoints,
-        maxPoints: pointsPerQuestion,
+        maxPoints: qMaxPoints,
         userAnswer: formattedUserTf,
         correctAnswer: formattedCorrectTf,
         explanation: q.explanation,
@@ -233,7 +249,7 @@ export function gradePracticeSession({
         const shortEval = evaluateShortAnswer(rawAnswer, q);
         isFullyCorrect = shortEval.isCorrect;
         if (isFullyCorrect) {
-          earnedPoints = pointsPerQuestion;
+          earnedPoints = qMaxPoints;
           correctCount++;
         } else {
           incorrectCount++;
@@ -251,7 +267,7 @@ export function gradePracticeSession({
       detailsPerQuestion[q.id] = {
         isCorrect: isFullyCorrect,
         earnedPoints,
-        maxPoints: pointsPerQuestion,
+        maxPoints: qMaxPoints,
         userAnswer: rawAnswer || 'Chưa trả lời',
         correctAnswer: primaryCorrectAnswer,
         explanation: q.explanation,
